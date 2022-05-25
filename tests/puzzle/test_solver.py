@@ -103,7 +103,11 @@ def check_solver_result(
     result = []
     ops = transaction.calculate_operations(synchronize=synchronize)
     for op in ops:
-        if op.job_type == "update":
+        if op.job_type == "uninstall":
+            job = "install"
+            result.append({"job": "remove", "package": op.package, "skipped": op.skipped})
+
+        elif op.job_type == "update":
             result.append(
                 {
                     "job": "update",
@@ -113,11 +117,7 @@ def check_solver_result(
                 }
             )
         else:
-            job = "install"
-            if op.job_type == "uninstall":
-                job = "remove"
-
-            result.append({"job": job, "package": op.package, "skipped": op.skipped})
+            result.append({"job": "install", "package": op.package, "skipped": op.skipped})
 
     assert result == expected
 
@@ -1199,12 +1199,12 @@ def test_solver_dense_dependencies(
     packages = []
     n = 22
     for i in range(n):
-        package_ai = get_package("a" + str(i), "1.0")
+        package_ai = get_package(f"a{str(i)}", "1.0")
         repo.add_package(package_ai)
         packages.append(package_ai)
-        package.add_dependency(Factory.create_dependency("a" + str(i), "^1.0"))
+        package.add_dependency(Factory.create_dependency(f"a{str(i)}", "^1.0"))
         for j in range(i):
-            package_ai.add_dependency(Factory.create_dependency("a" + str(j), "^1.0"))
+            package_ai.add_dependency(Factory.create_dependency(f"a{str(j)}", "^1.0"))
 
     transaction = solver.solve()
 
@@ -1730,8 +1730,7 @@ def test_solver_can_resolve_git_dependencies_with_ref(
         source_resolved_reference="9cf87a285a2d3fbb0b9fa621997b3acc3631ed24",
     )
 
-    git_config = {demo.source_type: demo.source_url}
-    git_config.update(ref)
+    git_config = {demo.source_type: demo.source_url} | ref
     package.add_dependency(Factory.create_dependency("demo", git_config))
 
     transaction = solver.solve()
@@ -1871,8 +1870,8 @@ def test_solver_does_not_trigger_new_resolution_on_duplicate_dependencies_if_onl
         ],
     )
 
-    assert str(ops[0].package.marker) == ""
-    assert str(ops[1].package.marker) == ""
+    assert not str(ops[0].package.marker)
+    assert not str(ops[1].package.marker)
 
 
 def test_solver_does_not_raise_conflict_for_locked_conditional_dependencies(

@@ -170,14 +170,13 @@ You can specify a package in the following forms:
         if self.option("dry-run"):
             argv.append("--dry-run")
 
-        exit_code: int = update_command.run(
+        return update_command.run(
             IO(
                 StringInput(" ".join(argv)),
                 self._io.output,
                 self._io.error_output,
             )
         )
-        return exit_code
 
     def get_existing_packages_from_input(
         self, packages: list[str], poetry_content: dict[str, Any], target_section: str
@@ -185,9 +184,11 @@ You can specify a package in the following forms:
         existing_packages = []
 
         for name in packages:
-            for key in poetry_content[target_section]:
-                if key.lower() == name.lower():
-                    existing_packages.append(name)
+            existing_packages.extend(
+                name
+                for key in poetry_content[target_section]
+                if key.lower() == name.lower()
+            )
 
         return existing_packages
 

@@ -19,17 +19,13 @@ class Command(BaseCommand):  # type: ignore[misc]
 
     @property
     def poetry(self) -> Poetry:
-        if self._poetry is None:
-            return self.get_application().poetry
-
-        return self._poetry
+        return self.get_application().poetry if self._poetry is None else self._poetry
 
     def set_poetry(self, poetry: Poetry) -> None:
         self._poetry = poetry
 
     def get_application(self) -> Application:
-        application: Application = self.application
-        return application
+        return self.application
 
     def reset_poetry(self) -> None:
         self.get_application().reset_poetry()

@@ -107,9 +107,7 @@ def style(fg, bg, options):
         if not isinstance(options, (list, tuple)):
             options = [options]
 
-        for option in options:
-            codes.append(OPTIONS[option])
-
+        codes.extend(OPTIONS[option] for option in options)
     return "\033[{}m".format(";".join(map(str, codes)))
 
 
@@ -149,10 +147,7 @@ def is_interactive():
 
 
 def colorize(style, text):
-    if not is_decorated():
-        return text
-
-    return "{}{}\033[0m".format(STYLES[style], text)
+    return "{}{}\033[0m".format(STYLES[style], text) if is_decorated() else text
 
 
 @contextmanager
@@ -363,7 +358,7 @@ class Installer:
                 version, upgrade=current_version is not None, file=self._offline_file
             )
         except subprocess.CalledProcessError as e:
-            print(colorize("error", "An error has occurred: {}".format(str(e))))
+            print(colorize("error", f"An error has occurred: {str(e)}"))
             print(e.output.decode())
 
             return e.returncode
@@ -599,25 +594,25 @@ class Installer:
         if platform == "linux2":
             platform = "linux"
 
-        url = self._base_url + "{}/".format(version)
-        name = "poetry-{}-{}.tar.gz".format(version, platform)
-        checksum = "poetry-{}-{}.sha256sum".format(version, platform)
+        url = self._base_url + f"{version}/"
+        name = f"poetry-{version}-{platform}.tar.gz"
+        checksum = f"poetry-{version}-{platform}.sha256sum"
 
         try:
-            r = urlopen(url + "{}".format(checksum))
+            r = urlopen(url + f"{checksum}")
         except HTTPError as e:
             if e.code == 404:
-                raise RuntimeError("Could not find {} file".format(checksum))
+                raise RuntimeError(f"Could not find {checksum} file")
 
             raise
 
         checksum = r.read().decode()
 
         try:
-            r = urlopen(url + "{}".format(name))
+            r = urlopen(url + f"{name}")
         except HTTPError as e:
             if e.code == 404:
-                raise RuntimeError("Could not find {} file".format(name))
+                raise RuntimeError(f"Could not find {name} file")
 
             raise
 
@@ -648,10 +643,9 @@ class Installer:
             # Checking hashes
             if checksum != sha.hexdigest():
                 raise RuntimeError(
-                    "Hashes for {} do not match: {} != {}".format(
-                        name, checksum, sha.hexdigest()
-                    )
+                    f"Hashes for {name} do not match: {checksum} != {sha.hexdigest()}"
                 )
+
 
             self.extract_lib(tar)
 
@@ -675,13 +669,13 @@ class Installer:
         for executable in allowed_executables:
             try:
                 raw_version = subprocess.check_output(
-                    executable + " --version", stderr=subprocess.STDOUT, shell=True
+                    f"{executable} --version", stderr=subprocess.STDOUT, shell=True
                 ).decode("utf-8")
+
             except subprocess.CalledProcessError:
                 continue
 
-            match = version_matcher.match(raw_version.strip())
-            if match:
+            if match := version_matcher.match(raw_version.strip()):
                 return executable
 
             if fallback is None:
@@ -787,8 +781,8 @@ class Installer:
                 ["fish", "-c", "echo $fish_user_paths"]
             ).decode("utf-8")
             if POETRY_BIN not in fish_user_paths:
-                cmd = "set -U fish_user_paths {} $fish_user_paths".format(POETRY_BIN)
-                set_fish_user_path = ["fish", "-c", "{}".format(cmd)]
+                cmd = f"set -U fish_user_paths {POETRY_BIN} $fish_user_paths"
+                set_fish_user_path = ["fish", "-c", f"{cmd}"]
                 subprocess.check_output(set_fish_user_path)
         else:
             print(
@@ -820,7 +814,7 @@ class Installer:
 
         new_path = POETRY_BIN
         if POETRY_BIN in old_path:
-            old_path = old_path.replace(POETRY_BIN + ";", "")
+            old_path = old_path.replace(f"{POETRY_BIN};", "")
 
         if old_path:
             new_path += ";"
@@ -874,10 +868,8 @@ class Installer:
             ["fish", "-c", "echo $fish_user_paths"]
         ).decode("utf-8")
         if POETRY_BIN in fish_user_paths:
-            cmd = "set -U fish_user_paths (string match -v {} $fish_user_paths)".format(
-                POETRY_BIN
-            )
-            set_fish_user_path = ["fish", "-c", "{}".format(cmd)]
+            cmd = f"set -U fish_user_paths (string match -v {POETRY_BIN} $fish_user_paths)"
+            set_fish_user_path = ["fish", "-c", f"{cmd}"]
             subprocess.check_output(set_fish_user_path)
 
     def remove_from_windows_path(self):
@@ -885,10 +877,10 @@ class Installer:
 
         poetry_path = POETRY_BIN
         if poetry_path in path:
-            path = path.replace(POETRY_BIN + ";", "")
+            path = path.replace(f"{POETRY_BIN};", "")
 
-            if poetry_path in path:
-                path = path.replace(POETRY_BIN, "")
+        if poetry_path in path:
+            path = path.replace(POETRY_BIN, "")
 
         self.set_windows_path_var(path)
 
@@ -924,9 +916,7 @@ class Installer:
 
     def get_export_string(self):
         path = POETRY_BIN.replace(os.getenv("HOME", ""), "$HOME")
-        export_string = 'export PATH="{}:$PATH"'.format(path)
-
-        return export_string
+        return f'export PATH="{path}:$PATH"'
 
     def get_unix_profiles(self):
         profiles = [os.path.join(HOME, ".profile")]
@@ -954,19 +944,18 @@ class Installer:
 
         if not self._modify_path:
             kwargs["platform_msg"] = PRE_MESSAGE_NO_MODIFY_PATH
+        elif "fish" in SHELL:
+            kwargs["platform_msg"] = PRE_MESSAGE_FISH
+        elif WINDOWS:
+            kwargs["platform_msg"] = PRE_MESSAGE_WINDOWS
         else:
-            if "fish" in SHELL:
-                kwargs["platform_msg"] = PRE_MESSAGE_FISH
-            elif WINDOWS:
-                kwargs["platform_msg"] = PRE_MESSAGE_WINDOWS
-            else:
-                profiles = [
-                    colorize("comment", p.replace(os.getenv("HOME", ""), "$HOME"))
-                    for p in self.get_unix_profiles()
-                ]
-                kwargs["platform_msg"] = PRE_MESSAGE_UNIX.format(
-                    rcfiles="\n".join(profiles), plural="s" if len(profiles) > 1 else ""
-                )
+            profiles = [
+                colorize("comment", p.replace(os.getenv("HOME", ""), "$HOME"))
+                for p in self.get_unix_profiles()
+            ]
+            kwargs["platform_msg"] = PRE_MESSAGE_UNIX.format(
+                rcfiles="\n".join(profiles), plural="s" if len(profiles) > 1 else ""
+            )
 
         print(PRE_MESSAGE.format(**kwargs))
 

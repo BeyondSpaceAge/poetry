@@ -48,7 +48,7 @@ class MockRepository(LegacyRepository):
         parts = endpoint.split("/")
         name = parts[1]
 
-        fixture = self.FIXTURES / (name + ".html")
+        fixture = self.FIXTURES / f"{name}.html"
         if not fixture.exists():
             return
 
@@ -103,12 +103,9 @@ def test_page_invalid_version_link():
     assert len(versions) == 1
     assert versions[0].to_string() == "0.1.0"
 
-    invalid_link = None
-
-    for link in links:
-        if link.filename.startswith("poetry-21"):
-            invalid_link = link
-            break
+    invalid_link = next(
+        (link for link in links if link.filename.startswith("poetry-21")), None
+    )
 
     links_010 = list(page.links_for_version("poetry", versions[0]))
     assert invalid_link not in links_010
@@ -429,7 +426,7 @@ def test_get_redirected_response_url(
     def get_mock(url: str, raise_for_status: bool = True) -> requests.Response:
         response = requests.Response()
         response.status_code = 200
-        response.url = redirect_url + "/foo"
+        response.url = f"{redirect_url}/foo"
         return response
 
     monkeypatch.setattr(repo.session, "get", get_mock)

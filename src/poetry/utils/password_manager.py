@@ -50,8 +50,7 @@ class KeyRing:
         import keyring
 
         for name in names:
-            credential = keyring.get_credential(name, username)
-            if credential:
+            if credential := keyring.get_credential(name, username):
                 return HTTPAuthCredential(
                     username=credential.username, password=credential.password
                 )
@@ -167,11 +166,11 @@ class PasswordManager:
             self.keyring.set_password(name, "__token__", token)
 
     def get_pypi_token(self, name: str) -> str | None:
-        if not self.keyring.is_available():
-            token: str | None = self._config.get(f"pypi-token.{name}")
-            return token
-
-        return self.keyring.get_password(name, "__token__")
+        return (
+            self.keyring.get_password(name, "__token__")
+            if self.keyring.is_available()
+            else self._config.get(f"pypi-token.{name}")
+        )
 
     def delete_pypi_token(self, name: str) -> None:
         if not self.keyring.is_available():
@@ -180,17 +179,16 @@ class PasswordManager:
         self.keyring.delete_password(name, "__token__")
 
     def get_http_auth(self, name: str) -> dict[str, str | None] | None:
-        auth = self._config.get(f"http-basic.{name}")
-        if not auth:
-            username = self._config.get(f"http-basic.{name}.username")
-            password = self._config.get(f"http-basic.{name}.password")
-            if not username and not password:
-                return None
-        else:
+        if auth := self._config.get(f"http-basic.{name}"):
             username, password = auth["username"], auth.get("password")
             if password is None:
                 password = self.keyring.get_password(name, username)
 
+        else:
+            username = self._config.get(f"http-basic.{name}.username")
+            password = self._config.get(f"http-basic.{name}.password")
+            if not username and not password:
+                return None
         return {
             "username": username,
             "password": password,

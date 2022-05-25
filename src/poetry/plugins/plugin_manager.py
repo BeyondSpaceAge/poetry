@@ -34,10 +34,7 @@ class PluginManager:
 
     def get_plugin_entry_points(self) -> list[entrypoints.EntryPoint]:
 
-        entry_points: list[entrypoints.EntryPoint] = entrypoints.get_group_all(
-            self._group
-        )
-        return entry_points
+        return entrypoints.get_group_all(self._group)
 
     def add_plugin(self, plugin: Plugin) -> None:
         if not isinstance(plugin, (Plugin, ApplicationPlugin)):

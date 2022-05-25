@@ -60,15 +60,13 @@ class HTTPRepository(CachedRepository, ABC):
 
     @property
     def cert(self) -> Path | None:
-        cert = self._authenticator.get_certs_for_url(self.url).get("verify")
-        if cert:
+        if cert := self._authenticator.get_certs_for_url(self.url).get("verify"):
             return Path(cert)
         return None
 
     @property
     def client_cert(self) -> Path | None:
-        cert = self._authenticator.get_certs_for_url(self.url).get("cert")
-        if cert:
+        if cert := self._authenticator.get_certs_for_url(self.url).get("cert"):
             return Path(cert)
         return None
 
