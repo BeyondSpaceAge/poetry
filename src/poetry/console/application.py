@@ -43,8 +43,7 @@ def load_command(name: str) -> Callable[[], type[Command]]:
         words = name.split(" ")
         module = import_module("poetry.console.commands." + ".".join(words))
         command_class = getattr(module, "".join(c.title() for c in words) + "Command")
-        command_type: type[Command] = command_class()
-        return command_type
+        return command_class()
 
     return _load
 
@@ -130,8 +129,7 @@ class Application(BaseApplication):  # type: ignore[misc]
 
     @property
     def command_loader(self) -> CommandLoader:
-        command_loader: CommandLoader = self._command_loader
-        return command_loader
+        return self._command_loader
 
     def reset_poetry(self) -> None:
         self._poetry = None
@@ -179,8 +177,7 @@ class Application(BaseApplication):  # type: ignore[misc]
 
         self._load_plugins(io)
 
-        exit_code: int = super()._run(io)
-        return exit_code
+        return super()._run(io)
 
     def _configure_io(self, io: IO) -> None:
         # We need to check if the command being run
@@ -200,7 +197,7 @@ class Application(BaseApplication):  # type: ignore[misc]
             for option_name, value in input.options.items():
                 if value:
                     option = definition.option(option_name)
-                    run_input.add_parameter_option("--" + option.name)
+                    run_input.add_parameter_option(f"--{option.name}")
                     if option.shortcut:
                         shortcuts = re.split(r"\|-?", option.shortcut.lstrip("-"))
                         shortcuts = [s for s in shortcuts if s]
@@ -380,8 +377,7 @@ class Application(BaseApplication):  # type: ignore[misc]
 
 
 def main() -> int:
-    exit_code: int = Application().run()
-    return exit_code
+    return Application().run()
 
 
 if __name__ == "__main__":

@@ -223,8 +223,7 @@ class VersionSolver:
             unsatisfied.dependency, not unsatisfied.is_positive(), incompatibility
         )
 
-        complete_name: str = unsatisfied.dependency.complete_name
-        return complete_name
+        return unsatisfied.dependency.complete_name
 
     def _resolve_conflict(self, incompatibility: Incompatibility) -> Incompatibility:
         """
@@ -381,8 +380,7 @@ class VersionSolver:
                 # only has one version to choose from.
                 return not dependency.marker.is_any(), 1
 
-            locked = self._get_locked(dependency)
-            if locked:
+            if locked := self._get_locked(dependency):
                 return not dependency.marker.is_any(), 1
 
             # VCS, URL, File or Directory dependencies
@@ -507,14 +505,21 @@ class VersionSolver:
             return None
 
         locked = self._locked.get(dependency.name, [])
-        for package in locked:
-            if (allow_similar or dependency.is_same_package_as(package.package)) and (
-                dependency.constraint.allows(package.version)
-                or package.is_prerelease()
-                and dependency.constraint.allows(package.version.next_patch())
-            ):
-                return DependencyPackage(dependency, package.package)
-        return None
+        return next(
+            (
+                DependencyPackage(dependency, package.package)
+                for package in locked
+                if (
+                    allow_similar or dependency.is_same_package_as(package.package)
+                )
+                and (
+                    dependency.constraint.allows(package.version)
+                    or package.is_prerelease()
+                    and dependency.constraint.allows(package.version.next_patch())
+                )
+            ),
+            None,
+        )
 
     def _log(self, text: str) -> None:
         self._provider.debug(text, self._solution.attempted_solutions)

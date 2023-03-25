@@ -228,20 +228,19 @@ class Executor:
                             f"  <fg=blue;options=bold>•</> {op_message}:"
                             " <fg=blue>Pending...</>"
                         )
-            else:
-                if self._should_write_operation(operation):
-                    if not operation.skipped:
-                        self._io.write_line(
-                            f"  <fg=blue;options=bold>•</> {op_message}"
-                        )
-                    else:
-                        self._io.write_line(
-                            f"  <fg=default;options=bold,dark>•</> {op_message}: "
-                            "<fg=default;options=bold,dark>Skipped</> "
-                            "<fg=default;options=dark>for the following reason:</> "
-                            f"<fg=default;options=bold,dark>{operation.skip_reason}</>"
-                        )
+            elif self._should_write_operation(operation):
+                if operation.skipped:
+                    self._io.write_line(
+                        f"  <fg=default;options=bold,dark>•</> {op_message}: "
+                        "<fg=default;options=bold,dark>Skipped</> "
+                        "<fg=default;options=dark>for the following reason:</> "
+                        f"<fg=default;options=bold,dark>{operation.skip_reason}</>"
+                    )
 
+                else:
+                    self._io.write_line(
+                        f"  <fg=blue;options=bold>•</> {op_message}"
+                    )
             try:
                 result = self._do_execute_operation(operation)
             except EnvCommandError as e:
@@ -653,7 +652,7 @@ class Executor:
             package.name,
             archive_path,
         )
-        archive_hash: str = "sha256:" + file_dep.hash()
+        archive_hash: str = f"sha256:{file_dep.hash()}"
         known_hashes = {f["hash"] for f in package.files}
 
         if archive_hash not in known_hashes:
@@ -683,7 +682,7 @@ class Executor:
                 progress = ProgressBar(
                     self._sections[id(operation)], max=int(wheel_size)
                 )
-                progress.set_format(message + " <b>%percent%%</b>")
+                progress.set_format(f"{message} <b>%percent%%</b>")
 
         if progress:
             with self._lock:
@@ -767,7 +766,7 @@ class Executor:
                         writer.writerow([str(path), "", ""])
 
     def _create_git_url_reference(self, package: Package) -> dict[str, Any]:
-        reference = {
+        return {
             "url": package.source_url,
             "vcs_info": {
                 "vcs": "git",
@@ -776,17 +775,13 @@ class Executor:
             },
         }
 
-        return reference
-
     def _create_url_url_reference(self, package: Package) -> dict[str, Any]:
         archive_info = {}
 
         if package.name in self._hashes:
             archive_info["hash"] = self._hashes[package.name]
 
-        reference = {"url": package.source_url, "archive_info": archive_info}
-
-        return reference
+        return {"url": package.source_url, "archive_info": archive_info}
 
     def _create_file_url_reference(self, package: Package) -> dict[str, Any]:
         archive_info = {}

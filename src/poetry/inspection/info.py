@@ -176,12 +176,9 @@ class PackageInfo:
         package.files = self.files
 
         if root_dir or (self._source_type in {"directory"} and self._source_url):
-            # this is a local poetry project, this means we can extract "richer"
-            # requirement information, eg: development requirements etc.
-            poetry_package = self._get_poetry_package(
+            if poetry_package := self._get_poetry_package(
                 path=root_dir or Path(cast(str, self._source_url))
-            )
-            if poetry_package:
+            ):
                 package.extras = poetry_package.extras
                 for dependency in poetry_package.requires:
                     package.add_dependency(dependency)
@@ -482,10 +479,12 @@ class PackageInfo:
 
             if not info or info.requires_dist is None:
                 try:
-                    if disable_build:
-                        info = cls.from_setup_files(path)
-                    else:
-                        info = get_pep517_metadata(path)
+                    info = (
+                        cls.from_setup_files(path)
+                        if disable_build
+                        else get_pep517_metadata(path)
+                    )
+
                 except PackageInfoError:
                     if not info:
                         raise

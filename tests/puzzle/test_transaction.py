@@ -19,7 +19,11 @@ def check_operations(ops: list[Operation], expected: list[dict[str, Any]]) -> No
 
     result = []
     for op in ops:
-        if op.job_type == "update":
+        if op.job_type == "uninstall":
+            job = "install"
+            result.append({"job": "remove", "package": op.package, "skipped": op.skipped})
+
+        elif op.job_type == "update":
             result.append(
                 {
                     "job": "update",
@@ -29,11 +33,7 @@ def check_operations(ops: list[Operation], expected: list[dict[str, Any]]) -> No
                 }
             )
         else:
-            job = "install"
-            if op.job_type == "uninstall":
-                job = "remove"
-
-            result.append({"job": job, "package": op.package, "skipped": op.skipped})
+            result.append({"job": "install", "package": op.package, "skipped": op.skipped})
 
     assert result == expected
 

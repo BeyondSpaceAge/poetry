@@ -128,8 +128,7 @@ The <c1>init</c1> command creates a basic <comment>pyproject.toml</> file in the
         author = self.option("author")
         if not author and vcs_config.get("user.name"):
             author = vcs_config["user.name"]
-            author_email = vcs_config.get("user.email")
-            if author_email:
+            if author_email := vcs_config.get("user.email"):
                 author += f" <{author_email}>"
 
         question = self.create_question(
@@ -138,11 +137,7 @@ The <c1>init</c1> command creates a basic <comment>pyproject.toml</> file in the
         question.set_validator(lambda v: self._validate_author(v, author))
         author = self.ask(question)
 
-        if not author:
-            authors = []
-        else:
-            authors = [author]
-
+        authors = [author] if author else []
         license = self.option("license") or ""
 
         question = self.create_question(
@@ -289,11 +284,7 @@ You can specify a package in the following forms:
                     continue
 
                 canonicalized_name = canonicalize_name(constraint["name"])
-                matches = self._get_pool().search(canonicalized_name)
-                if not matches:
-                    self.line_error("<error>Unable to find package</error>")
-                    package = False
-                else:
+                if matches := self._get_pool().search(canonicalized_name):
                     choices = self._generate_choice_list(matches, canonicalized_name)
 
                     info_string = (
@@ -324,6 +315,9 @@ You can specify a package in the following forms:
                     if package:
                         constraint["name"] = package
 
+                else:
+                    self.line_error("<error>Unable to find package</error>")
+                    package = False
                 # no constraint yet, determine the best version automatically
                 if package and "version" not in constraint:
                     question = self.create_question(
